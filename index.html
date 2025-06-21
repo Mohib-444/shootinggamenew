@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Realistic Shooting Game</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: black;
+    }
+    #gameArea {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background-image: url('/Users/saiyedmohammadmohib/Desktop/shooting game/backgrounggun.jpg'); /* 3D-style background */
+      background-size: cover;
+      overflow: hidden;
+    }
+    #scoreBoard {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-size: 24px;
+      z-index: 999;
+      font-family: monospace;
+    }
+    .player, .enemy {
+      position: absolute;
+      width: 60px;
+      height: 80px;
+      background-size: contain;
+      background-repeat: no-repeat;
+    }
+    .player {
+      background-image: url('tee.jpg');
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .enemy {
+      background-image: url('/Users/saiyedmohammadmohib/Desktop/shooting game/IMG_2036.jpeg');
+      top: 50px;
+    }
+    .bullet, .enemyBullet {
+      width: 6px;
+      height: 15px;
+      background: rgb(16, 133, 16);
+      position: absolute;
+    }
+    .enemyBullet {
+      background: red;
+    }
+  </style>
+</head>
+<body>
+  <div id="gameArea">
+    <div id="scoreBoard">Score: 0</div>
+    <div id="player" class="player"></div>
+    <div id="enemy" class="enemy"></div>
+  </div>
+
+  <!-- Sound effects -->
+  <audio id="shootSound" src="https://freesound.org/data/previews/341/341695_3248244-lq.mp3"></audio>
+  <audio id="hitSound" src="https://freesound.org/data/previews/256/256113_3263906-lq.mp3"></audio>
+
+  <script>
+    const player = document.getElementById('player');
+    const enemy = document.getElementById('enemy');
+    const gameArea = document.getElementById('gameArea');
+    const scoreBoard = document.getElementById('scoreBoard');
+    const shootSound = document.getElementById('shootSound');
+    const hitSound = document.getElementById('hitSound');
+
+    let score = 0;
+    let bullets = [];
+    let enemyBullets = [];
+    let keys = {};
+    let playerX = window.innerWidth / 2 - 30;
+
+    // Handle player movement
+    function movePlayer() {
+      if (keys["ArrowLeft"] && playerX > 0) playerX -= 6;
+      if (keys["ArrowRight"] && playerX < window.innerWidth - 60) playerX += 6;
+      player.style.left = `${playerX}px`;
+    }
+
+    // Create bullet
+    function shootBullet() {
+      const bullet = document.createElement('div');
+      bullet.className = 'bullet';
+      bullet.style.left = `${playerX + 27}px`;
+      bullet.style.bottom = '100px';
+      gameArea.appendChild(bullet);
+      bullets.push(bullet);
+      shootSound.currentTime = 0;
+      shootSound.play();
+    }
+
+    // Enemy AI: move & shoot
+    function moveEnemy() {
+      const enemyX = parseInt(enemy.style.left || 200);
+      const dx = playerX - enemyX;
+      enemy.style.left = `${enemyX + Math.sign(dx) * 2}px`;
+
+      if (Math.random() < 0.02) shootEnemyBullet(enemyX + 20);
+    }
+
+    // Enemy shoots
+    function shootEnemyBullet(x) {
+      const bullet = document.createElement('div');
+      bullet.className = 'enemyBullet';
+      bullet.style.left = `${x}px`;
+      bullet.style.top = `100px`;
+      gameArea.appendChild(bullet);
+      enemyBullets.push(bullet);
+    }
+
+    // Move bullets
+    function updateBullets() {
+      bullets.forEach((bullet, i) => {
+        let bottom = parseInt(bullet.style.bottom);
+        bullet.style.bottom = `${bottom + 10}px`;
+
+        const bRect = bullet.getBoundingClientRect();
+        const eRect = enemy.getBoundingClientRect();
+        if (
+          bRect.left < eRect.right &&
+          bRect.right > eRect.left &&
+          bRect.top < eRect.bottom &&
+          bRect.bottom > eRect.top
+        ) {
+          bullet.remove();
+          bullets.splice(i, 1);
+          score++;
+          hitSound.currentTime = 0;
+          hitSound.play();
+          scoreBoard.innerText = `Score: ${score}`;
+          spawnEnemy();
+        }
+
+        if (bottom > window.innerHeight) {
+          bullet.remove();
+          bullets.splice(i, 1);
+        }
+      });
+    }
+
+    // Enemy bullet movement
+    function updateEnemyBullets() {
+      enemyBullets.forEach((bullet, i) => {
+        let top = parseInt(bullet.style.top);
+        bullet.style.top = `${top + 6}px`;
+
+        const bRect = bullet.getBoundingClientRect();
+        const pRect = player.getBoundingClientRect();
+        if (
+          bRect.left < pRect.right &&
+          bRect.right > pRect.left &&
+          bRect.top < pRect.bottom &&
+          bRect.bottom > pRect.top
+        ) {
+          alert("💥 Game Over! Final Score: " + score);
+          location.reload();
+        }
+
+        if (top > window.innerHeight) {
+          bullet.remove();
+          enemyBullets.splice(i, 1);
+        }
+      });
+    }
+
+    // Respawn enemy
+    function spawnEnemy() {
+      const x = Math.random() * (window.innerWidth - 60);
+      enemy.style.left = `${x}px`;
+    }
+
+    // Keyboard control
+    window.addEventListener("keydown", (e) => {
+      keys[e.key] = true;
+      if (e.key === " ") shootBullet();
+    });
+    window.addEventListener("keyup", (e) => {
+      keys[e.key] = false;
+    });
+
+    // Game loop
+    function gameLoop() {
+      movePlayer();
+      moveEnemy();
+      updateBullets();
+      updateEnemyBullets();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Start game
+    player.style.left = `${playerX}px`;
+    spawnEnemy();
+    gameLoop();
+  </script>
+</body>
+</html>
